@@ -115,6 +115,7 @@
   function conectar() {
     const protocol = location.protocol === "https:" ? "wss" : "ws";
     socket = new WebSocket(`${protocol}://${location.host}`);
+    // console.log("Mensagem recebida do servidor:", msg);
     socket.addEventListener("open", () => {
       // Enviar pedido de login com o nickname
       socket.send(JSON.stringify({
@@ -127,6 +128,7 @@
     socket.addEventListener("message", (event) => {
       const msg = JSON.parse(event.data);
       tratarMensagem(msg);
+      // adicionarMensagem(msg);
     });
 
     socket.addEventListener("close", () => {
@@ -137,7 +139,6 @@
   // 2. TRATAR MENSAGENS RECEBIDAS DO SERVIDOR
   // --------------------------------------------------------
   function tratarMensagem(msg) {
-    // console.log("Mensagem recebida do servidor:", msg);
     // Servidor confirmou o login
     if (msg.tipo === "confirmacao") {
       minhaCor = msg.color;
@@ -181,7 +182,6 @@
   function adicionarMensagem({ hora, username, color, texto }) {
     const linha = document.createElement("div");
     linha.className = "msg-linha";
-
     linha.innerHTML = `
       <span class="msg-hora">[${hora}]</span>
       <span class="msg-nick" style="color:${color}">${escaparHTML(username)}</span>
@@ -207,14 +207,35 @@
   // 6. ATUALIZAR LISTA DE USUÁRIOS NA SIDEBAR
   // --------------------------------------------------------
   function atualizarListaUsuarios(usuarios) {
-
+    listaUsuarios.innerHTML = "";
+    contagemUsuarios.textContent = usuarios.length;
+    usuarios.forEach(({username, color}) => {
+      const li = document.createElement("li");
+      li.innerHTML = `
+      <span class="status-dot"></span>
+      <span></span>
+      <span class="username">${username}</span>
+      `;
+      listaUsuarios.appendChild(li);
+    });
   }
 
   // --------------------------------------------------------
   // 7. ENVIAR MENSAGEM
   // --------------------------------------------------------
   function enviarMensagem() {
+    const texto = inputMsg.value.trim();
+    if (!texto) return;
+    
+    // Envia para o servidor
+    socket.send(JSON.stringify({
+      tipo: "mensagem",
+      texto: texto
+    }));
 
+    // Limpa o input
+    inputMsg.value = "";
+    inputMsg.focus();
   }
 
   // --------------------------------------------------------

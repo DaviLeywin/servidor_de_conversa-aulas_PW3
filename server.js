@@ -65,7 +65,7 @@ function proximaCor() {
 //enviar json para um único cliente 
 function enviar(socket, objeto) {
   if (socket.readyState === socket.OPEN) {
-    socket.send(JSON.stringify(objeto));
+    socket.send(JSON.stringify(objeto));//envia para o cliente na funcao enviar
   }
   
 }
@@ -86,6 +86,7 @@ function listaUsuarios() {
     );
 
 }
+
 // -----------------------------------------------------------
 // 4. Eventos WebSocket
 // -----------------------------------------------------------
@@ -100,6 +101,22 @@ wss.on("connection", (socket) => {
       return;
     }
     //tipo entrar
+    if(data.tipo === "mensagem"){
+      const cliente = clientes.get(socket);
+      if(!cliente) return;
+      const texto = String(data.texto).trim().slice(0, 200);
+      if(!texto) return;
+      broadcast({
+        hora: new Date().toLocaleTimeString('pt-BR', { hour: "2-digit", minute: "2-digit" }),
+        tipo: "mensagem",
+        username: cliente.username,
+        color: cliente.color,
+        texto: texto
+      });
+      
+    }
+
+    // console.log("Mensagem recebida do cliente:", data);
     if(data.tipo === "entrar"){
       const username = String(data.username).trim().slice(0, 20);
       // @TODO validar username (não vazio, não duplicado)
@@ -108,7 +125,26 @@ wss.on("connection", (socket) => {
 
       // envia a lista de usuários para o novo cliente
       enviar(socket, { tipo: "confirmacao", usuario: username, color: color});
+      broadcast({
+        tipo: "sistema",
+        texto: `${username} entrou no chat`,
+        usuarios: listaUsuarios()
+      });
     }
+
+    socket.on("close", () => {
+      const cliente = clientes.get(socket);
+      if(!cliente) return;
+      if(cliente){
+        clientes.delete(socket);
+        broadcast({
+          tipo: "sistema",
+          texto: `${cliente.username} saiu do chat`,
+          usuarios: listaUsuarios()
+        });
+      }
+    });
+    
   })
 });
 
